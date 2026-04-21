@@ -5,6 +5,7 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
@@ -98,11 +99,13 @@ func writeDefaultConfig(path string) error {
 func backfillDefaults(path string) bool {
 	existing, err := os.ReadFile(path)
 	if err != nil {
+		slog.Warn("backfill: read config", "path", path, "error", err)
 		return false
 	}
 
 	var existingMap map[string]any
 	if err := yaml.Unmarshal(existing, &existingMap); err != nil {
+		slog.Warn("backfill: parse user config, skipping", "path", path, "error", err)
 		return false
 	}
 	if existingMap == nil {
@@ -111,6 +114,7 @@ func backfillDefaults(path string) bool {
 
 	var defaultMap map[string]any
 	if err := yaml.Unmarshal(defaultConfigYAML, &defaultMap); err != nil {
+		slog.Warn("backfill: parse embedded defaults", "error", err)
 		return false
 	}
 	if defaultMap == nil {
@@ -123,17 +127,19 @@ func backfillDefaults(path string) bool {
 
 	out, err := yaml.Marshal(existingMap)
 	if err != nil {
+		slog.Warn("backfill: marshal merged config", "error", err)
 		return false
 	}
 
-	if !bytes.Equal(bytes.TrimSpace(existing), bytes.TrimSpace(out)) {
-		if err := os.WriteFile(path, out, 0644); err != nil {
-			return false
-		}
-		return true
+	if bytes.Equal(bytes.TrimSpace(existing), bytes.TrimSpace(out)) {
+		return false
 	}
 
-	return false
+	if err := os.WriteFile(path, out, 0644); err != nil {
+		slog.Warn("backfill: write merged config", "path", path, "error", err)
+		return false
+	}
+	return true
 }
 
 func mergeDefaults(dst, src map[string]any) bool {
