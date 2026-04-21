@@ -152,9 +152,9 @@ Key file references:
 
 - `cmd/railwaylog/main.go:31` — `run()` orchestration
 - `cmd/railwaylog/main.go:103` — `resolveLinked()` priority layering
-- `internal/api/logs.go:62` — `StreamDeployLogs` reconnect loop
-- `internal/api/logs.go:96` — `runStream` single connection
-- `internal/api/logs.go:110` — 16 MiB WS read limit
+- `pkg/railway/logs.go:62` — `StreamDeployLogs` reconnect loop
+- `pkg/railway/logs.go:96` — `runStream` single connection
+- `pkg/railway/logs.go:110` — 16 MiB WS read limit
 
 ---
 
@@ -269,7 +269,7 @@ persist across reconnects:
 ### Dedup
 
 ```go
-// internal/api/logs.go:152
+// pkg/railway/logs.go:152
 if state.lastTimestamp != "" && line.Timestamp <= state.lastTimestamp {
     continue // replay after reconnect — already delivered
 }
@@ -451,9 +451,9 @@ Everything else — HTTP, JSON, logging, signals — comes from the standard lib
 | `cmd/railwaylog/logger.go`            | slog file handler                                  |
 | `internal/config/config.go`           | `Config`, `Load()`, `backfillDefaults()`           |
 | `internal/config/default_config.yaml` | embedded defaults                                  |
-| `internal/railway/link.go`            | `Auth`, `LinkedProject`, env + config.json sources |
-| `internal/api/client.go`              | `Client`, `Query()`, auth header selection         |
-| `internal/api/deployment.go`          | `LatestDeployment` query                           |
-| `internal/api/logs.go`                | reconnect loop, WS handshake, dedupe               |
-| `internal/api/retry.go`               | exponential `Backoff`                              |
+| `pkg/railway/link.go`                 | `Auth`, `LinkedProject`, env + config.json sources |
+| `pkg/railway/client.go`               | `Client`, `Query()`, auth header selection         |
+| `pkg/railway/deployment.go`           | `LatestDeployment` query                           |
+| `pkg/railway/logs.go`                 | reconnect loop, WS handshake, dedupe               |
+| `pkg/railway/retry.go`                | exponential `Backoff`                              |
 | `internal/output/ndjson.go`           | `Writer`, `decodeAttrValue`                        |

@@ -11,10 +11,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/lwlee2608/railwaylog/internal/api"
 	"github.com/lwlee2608/railwaylog/internal/config"
 	"github.com/lwlee2608/railwaylog/internal/output"
-	"github.com/lwlee2608/railwaylog/internal/railway"
+	"github.com/lwlee2608/railwaylog/pkg/railway"
 )
 
 var AppVersion = "dev"
@@ -75,7 +74,7 @@ func run() error {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 
-	client := api.NewClient(auth, cfg.Railway.HTTPEndpoint, cfg.Railway.WSEndpoint)
+	client := railway.NewClient(auth, cfg.Railway.HTTPEndpoint, cfg.Railway.WSEndpoint)
 
 	depID := *deploymentFlag
 	if depID == "" {
@@ -90,7 +89,7 @@ func run() error {
 
 	writer := output.NewWriter(os.Stdout)
 
-	retry := api.RetryConfig{
+	retry := railway.RetryConfig{
 		MaxAttempts:  cfg.Reconnect.MaxAttempts,
 		InitialDelay: time.Duration(cfg.Reconnect.InitialDelayMs) * time.Millisecond,
 		MaxDelay:     time.Duration(cfg.Reconnect.MaxDelayMs) * time.Millisecond,

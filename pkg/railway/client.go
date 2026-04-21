@@ -1,4 +1,4 @@
-package api
+package railway
 
 import (
 	"bytes"
@@ -7,18 +7,16 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-
-	"github.com/lwlee2608/railwaylog/internal/railway"
 )
 
 type Client struct {
 	http         *http.Client
-	auth         *railway.Auth
+	auth         *Auth
 	httpEndpoint string
 	wsEndpoint   string
 }
 
-func NewClient(auth *railway.Auth, httpEndpoint, wsEndpoint string) *Client {
+func NewClient(auth *Auth, httpEndpoint, wsEndpoint string) *Client {
 	return &Client{
 		http:         &http.Client{},
 		auth:         auth,
@@ -28,7 +26,7 @@ func NewClient(auth *railway.Auth, httpEndpoint, wsEndpoint string) *Client {
 }
 
 func (c *Client) AuthHeader() (string, string) {
-	if c.auth.Kind == railway.TokenProjectAccess {
+	if c.auth.Kind == TokenProjectAccess {
 		return "project-access-token", c.auth.Token
 	}
 	return "Authorization", "Bearer " + c.auth.Token
