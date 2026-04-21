@@ -49,33 +49,35 @@ talks to a single upstream (Railway's GraphQL endpoint). Output is a Unix pipe.
 
 ```
 railwaylog/
-├── cmd/railwaylog/          entry point — flag parsing, orchestration, signals
-│   ├── main.go              run(): wires config → api → output
-│   └── logger.go            slog setup (file-based diagnostic log)
+├── cmd/railwaylog/          entry point — flag parsing only
+│   └── main.go              parses flags, calls railwaylog.Run()
 │
 ├── internal/
+│   ├── railwaylog/          orchestration — wires config → railway → output
+│   │   ├── service.go       Run(): signals, config, client, stream
+│   │   ├── resolve.go       resolveLinked / resolveAuth priority layering
+│   │   └── logger.go        slog setup (file-based diagnostic log)
+│   │
 │   ├── config/              YAML config with embedded defaults + backfill
 │   │   ├── config.go        Config structs, Load(), backfillDefaults()
 │   │   └── default_config.yaml   //go:embed baseline
 │   │
-│   ├── railway/             Railway CLI interop + auth resolution
-│   │   └── link.go          reads ~/.railway/config.json, env vars
-│   │
-│   ├── api/                 GraphQL client (HTTP + WS subscription)
-│   │   ├── client.go        Client, Query(), auth headers
-│   │   ├── deployment.go    LatestDeployment query
-│   │   ├── logs.go          StreamDeployLogs — reconnect loop + WS frames
-│   │   └── retry.go         exponential backoff
-│   │
 │   └── output/
 │       └── ndjson.go        NDJSON Writer, attribute JSON-unwrap
 │
-└── pkg/                     (reserved; currently empty)
+└── pkg/
+    └── railway/             Railway GraphQL client + auth resolution
+        ├── client.go        Client, Query(), auth headers
+        ├── deployment.go    LatestDeployment query
+        ├── logs.go          StreamDeployLogs — reconnect loop + WS frames
+        ├── retry.go         exponential backoff
+        └── link.go          reads ~/.railway/config.json, env vars
 ```
 
-Boundaries are strict: `cmd` is the only package that imports everything; `api`
-depends on `railway` (auth) and `output` (sink); `config` and `output` depend on
-nothing internal.
+Boundaries are strict: `cmd` only parses flags and delegates; `internal/railwaylog`
+orchestrates and is the only package that imports everything else; `pkg/railway`
+depends only on `internal/output`; `config` and `output` depend on nothing
+internal.
 
 ---
 
@@ -83,8 +85,8 @@ nothing internal.
 
 ```
                         ┌────────────────────────┐
-                        │  cmd/railwaylog.run()  │
-                        │  main.go:31            │
+                        │   railwaylog.Run()     │
+                        │   service.go           │
                         └──┬──────────┬───────┬──┘
            resolveLinked() │          │       │ signal.NotifyContext
                            ▼          ▼       ▼
@@ -150,8 +152,8 @@ User         cmd.run         config        railway       api.Client     WS serve
 
 Key file references:
 
-- `cmd/railwaylog/main.go:31` — `run()` orchestration
-- `cmd/railwaylog/main.go:103` — `resolveLinked()` priority layering
+- `internal/railwaylog/service.go` — `Run()` orchestration
+- `internal/railwaylog/resolve.go` — `resolveLinked()` priority layering
 - `pkg/railway/logs.go:62` — `StreamDeployLogs` reconnect loop
 - `pkg/railway/logs.go:96` — `runStream` single connection
 - `pkg/railway/logs.go:110` — 16 MiB WS read limit
@@ -447,8 +449,10 @@ Everything else — HTTP, JSON, logging, signals — comes from the standard lib
 
 | File                                  | Role                                               |
 | ------------------------------------- | -------------------------------------------------- |
-| `cmd/railwaylog/main.go`              | `run()`, flag parsing, `resolveLinked()`           |
-| `cmd/railwaylog/logger.go`            | slog file handler                                  |
+| `cmd/railwaylog/main.go`              | flag parsing, `--version`, delegates to `Run()`    |
+| `internal/railwaylog/service.go`      | `Run()`, `Options`, signals, stream lifecycle      |
+| `internal/railwaylog/resolve.go`      | `resolveLinked()`, `resolveAuth()`                 |
+| `internal/railwaylog/logger.go`       | slog file handler                                  |
 | `internal/config/config.go`           | `Config`, `Load()`, `backfillDefaults()`           |
 | `internal/config/default_config.yaml` | embedded defaults                                  |
 | `pkg/railway/link.go`                 | `Auth`, `LinkedProject`, env + config.json sources |
