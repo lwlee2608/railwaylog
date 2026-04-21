@@ -56,13 +56,18 @@ func run() error {
 
 	slog.Info("starting railwaylog", "version", AppVersion)
 
-	linked := resolveLinked(cfg, *projectFlag, *environmentFlag, *serviceFlag)
+	railwayLinked, railwayAuth, err := railway.Load()
+	if err != nil {
+		slog.Warn("read ~/.railway/config.json", "error", err)
+	}
+
+	linked := resolveLinked(cfg, railwayLinked, *projectFlag, *environmentFlag, *serviceFlag)
 	if linked.ProjectID == "" || linked.EnvironmentID == "" || linked.ServiceID == "" {
 		return fmt.Errorf("missing project/environment/service — set in %s, use RAILWAY_*_ID env vars, pass --service/--environment/--project, or run `railway link`",
 			configPathHint())
 	}
 
-	auth, err := resolveAuth()
+	auth, err := resolveAuth(railwayAuth)
 	if err != nil {
 		return err
 	}
@@ -96,7 +101,7 @@ func run() error {
 }
 
 // resolveLinked layers: CLI flags > config YAML > RAILWAY_*_ID env vars > ~/.railway/config.json.
-func resolveLinked(cfg *config.Config, projectFlag, envFlag, serviceFlag string) railway.LinkedProject {
+func resolveLinked(cfg *config.Config, linkFile *railway.LinkedProject, projectFlag, envFlag, serviceFlag string) railway.LinkedProject {
 	result := railway.LinkedProject{
 		ProjectID:     projectFlag,
 		EnvironmentID: envFlag,
@@ -118,30 +123,24 @@ func resolveLinked(cfg *config.Config, projectFlag, envFlag, serviceFlag string)
 	fill(&result.EnvironmentID, env.EnvironmentID)
 	fill(&result.ServiceID, env.ServiceID)
 
-	if linked, _, err := railway.Load(); err == nil && linked != nil {
-		fill(&result.ProjectID, linked.ProjectID)
-		fill(&result.EnvironmentID, linked.EnvironmentID)
-		fill(&result.ServiceID, linked.ServiceID)
-	} else if err != nil {
-		slog.Warn("read ~/.railway/config.json", "error", err)
+	if linkFile != nil {
+		fill(&result.ProjectID, linkFile.ProjectID)
+		fill(&result.EnvironmentID, linkFile.EnvironmentID)
+		fill(&result.ServiceID, linkFile.ServiceID)
 	}
 
 	return result
 }
 
 // resolveAuth layers: env vars > ~/.railway/config.json.
-func resolveAuth() (*railway.Auth, error) {
+func resolveAuth(linkFileAuth *railway.Auth) (*railway.Auth, error) {
 	if a := railway.AuthFromEnv(); a != nil {
 		return a, nil
 	}
-	_, a, err := railway.Load()
-	if err != nil {
-		return nil, fmt.Errorf("read ~/.railway/config.json: %w", err)
+	if linkFileAuth != nil {
+		return linkFileAuth, nil
 	}
-	if a == nil {
-		return nil, errors.New("no Railway auth token; set RAILWAY_API_TOKEN / RAILWAY_TOKEN or run `railway login`")
-	}
-	return a, nil
+	return nil, errors.New("no Railway auth token; set RAILWAY_API_TOKEN / RAILWAY_TOKEN or run `railway login`")
 }
 
 func configPathHint() string {
