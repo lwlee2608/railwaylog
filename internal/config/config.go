@@ -14,28 +14,28 @@ import (
 )
 
 type Config struct {
-	Log       LogConfig       `mapstructure:"log"`
-	Railway   RailwayConfig   `mapstructure:"railway"`
-	Reconnect ReconnectConfig `mapstructure:"reconnect"`
+	Log       LogConfig       `mapstructure:"log" yaml:"log"`
+	Railway   RailwayConfig   `mapstructure:"railway" yaml:"railway"`
+	Reconnect ReconnectConfig `mapstructure:"reconnect" yaml:"reconnect"`
 }
 
 type LogConfig struct {
-	Level string `mapstructure:"level"`
-	Path  string `mapstructure:"path"`
+	Level string `mapstructure:"level" yaml:"level"`
+	Path  string `mapstructure:"path" yaml:"path"`
 }
 
 type RailwayConfig struct {
-	ProjectID     string `mapstructure:"project_id"`
-	EnvironmentID string `mapstructure:"environment_id"`
-	ServiceID     string `mapstructure:"service_id"`
-	HTTPEndpoint  string `mapstructure:"http_endpoint"`
-	WSEndpoint    string `mapstructure:"ws_endpoint"`
+	ProjectID     string `mapstructure:"project_id" yaml:"project_id"`
+	EnvironmentID string `mapstructure:"environment_id" yaml:"environment_id"`
+	ServiceID     string `mapstructure:"service_id" yaml:"service_id"`
+	HTTPEndpoint  string `mapstructure:"http_endpoint" yaml:"http_endpoint"`
+	WSEndpoint    string `mapstructure:"ws_endpoint" yaml:"ws_endpoint"`
 }
 
 type ReconnectConfig struct {
-	MaxAttempts    int `mapstructure:"max_attempts"`
-	InitialDelayMs int `mapstructure:"initial_delay_ms"`
-	MaxDelayMs     int `mapstructure:"max_delay_ms"`
+	MaxAttempts    int `mapstructure:"max_attempts" yaml:"max_attempts"`
+	InitialDelayMs int `mapstructure:"initial_delay_ms" yaml:"initial_delay_ms"`
+	MaxDelayMs     int `mapstructure:"max_delay_ms" yaml:"max_delay_ms"`
 }
 
 func Load() (*Config, error) {
